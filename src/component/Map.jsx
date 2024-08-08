@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import io from "socket.io-client";
 
-const SOCKET_SERVER_URL = process.env.REACT_APP_BASE_URL; // Update this if your server runs on a different host or port
+const SOCKET_SERVER_URL = process.env.BACKEND_APP_BASE_URL; // Update this if your server runs on a different host or port
 
 // Define the custom marker icon
 const customIcon = L.icon({
