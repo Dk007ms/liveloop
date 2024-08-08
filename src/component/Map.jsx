@@ -1,8 +1,17 @@
-// src/components/Map.js
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import io from "socket.io-client";
+
+const SOCKET_SERVER_URL = "http://localhost:4000"; // Update this if your server runs on a different host or port
+
+// Define the custom marker icon
+const customIcon = L.icon({
+  iconUrl: "/assets/location-pin.png", // Replace with the path to your custom icon
+  iconSize: [38, 38], // Size of the icon
+  iconAnchor: [19, 38], // Anchor point of the icon (base of the pin)
+  popupAnchor: [0, -38], // Point from which the popup should open relative to the iconAnchor
+});
 
 const Map = () => {
   const mapRef = useRef(null);
@@ -10,7 +19,6 @@ const Map = () => {
   const socket = useRef(null);
 
   useEffect(() => {
-    // Initialize the map only if it hasn't been initialized yet
     if (!mapRef.current) {
       mapRef.current = L.map("map").setView([0, 0], 16);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -18,22 +26,29 @@ const Map = () => {
       }).addTo(mapRef.current);
     }
 
-    // Initialize socket.io
-    socket.current = io();
+    socket.current = io(SOCKET_SERVER_URL);
 
-    // Listen for location updates
+    socket.current.on("connect", () => {
+      console.log("Connected to socket server:", socket.current.id);
+    });
+
+    socket.current.on("connect_error", (err) => {
+      console.error("Connection error:", err);
+    });
+
     socket.current.on("receive-location", (data) => {
       const { id, latitude, longitude } = data;
+      console.log("Received location:", data);
+
       mapRef.current.setView([latitude, longitude]);
 
-      // Update or create marker for each location
       setMarkers((prevMarkers) => {
         if (prevMarkers[id]) {
           prevMarkers[id].setLatLng([latitude, longitude]);
         } else {
-          prevMarkers[id] = L.marker([latitude, longitude]).addTo(
-            mapRef.current
-          );
+          prevMarkers[id] = L.marker([latitude, longitude], {
+            icon: customIcon,
+          }).addTo(mapRef.current);
         }
         return { ...prevMarkers };
       });
@@ -49,12 +64,12 @@ const Map = () => {
       });
     });
 
-    // Send location periodically
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           socket.current.emit("send-location", { latitude, longitude });
+          console.log("Sending location:", position.coords);
         },
         (error) => console.error("Error getting geolocation:", error),
         {
@@ -67,7 +82,6 @@ const Map = () => {
       console.error("Geolocation is not supported by this browser.");
     }
 
-    // Cleanup on component unmount
     return () => {
       if (socket.current) {
         socket.current.disconnect();

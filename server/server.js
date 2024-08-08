@@ -1,31 +1,56 @@
 const express = require("express");
-const app = express();
-const socketio = require("socket.io");
 const http = require("http");
+const socketio = require("socket.io");
 const path = require("path");
-const dotenv=require("dotenv");
+const cors = require("cors");
+const dotenv = require("dotenv");
+
+dotenv.config();
+
+const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
+const io = socketio(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+
+
+// CORS configuration (optional, but necessary if frontend and backend are on different origins)
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Allow only this origin
+    credentials: true, // Allow cookies and credentials to be sent
+  })
+);
 
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, "../build")));
+app.use(express.static(path.join(__dirname, "build")));
 
 // Socket.io connection event
-io.on("connection", function (socket) {
-  socket.on("send-location", function (data) {
+io.on("connection", (socket) => {
+  console.log("New client connected:", socket.id);
+
+  socket.on("send-location", (data) => {
+    console.log("Location received from client:", data);
     io.emit("receive-location", { id: socket.id, ...data });
   });
-  socket.on("disconnect", function () {
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
     io.emit("user-disconnected", socket.id);
   });
 });
 
 // Handle any requests that don't match the API routes
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../liveloop/build/index.html"));
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 // Start the server
-server.listen(process.env.PORT ||4000, () => {
-  console.log("Server is listening on port 3000");
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
 });
