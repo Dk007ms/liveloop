@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
-    origin: "*",
+    origin: process.env.BACKEND_APP_BASE_URL,
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -21,8 +21,8 @@ const io = socketio(server, {
 // CORS configuration (optional, but necessary if frontend and backend are on different origins)
 app.use(
   cors({
-    origin: "*",
-    credentials: true,
+    origin: process.env.BACKEND_APP_BASE_URL, // Allow only this origin
+    credentials: true, // Allow cookies and credentials to be sent
   })
 );
 
